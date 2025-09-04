@@ -21,17 +21,38 @@ from xgboost import XGBClassifier  # Imports XGBClassifier for gradient boosting
 import warnings
 warnings.filterwarnings('ignore')  # Suppresses warnings to keep the output clean.
 
-pd.set_option('display.max_columns',None)
-df = pd.read_excel("data/E_Commerce_Dataset.xlsx", sheet_name="E Comm")
-df.head()
+#Impute Missing Values
+from sklearn.impute import SimpleImputer  # Imports SimpleImputer for handling missing data with basic strategies.
+from sklearn.experimental import enable_iterative_imputer  # Enables the experimental IterativeImputer in scikit-learn.
+from sklearn.impute import IterativeImputer  # Imports IterativeImputer for advanced imputation techniques using iterative models.
+from sklearn.ensemble import RandomForestRegressor  # Imports RandomForestRegressor for regression tasks using ensemble methods.
+import pandas as pd  # Imports the pandas library for data manipulation and analysis.
 
-df.shape
-df.describe().info()
-df.describe()
-df.info()
-df.isnull().sum()
+def fill_missing_values(df, random_state=None):
+    # Step 1: Identify numeric and categorical columns
+    numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+    categorical_columns = df.select_dtypes(include=['object']).columns.tolist()  # Include both string and category data
 
+    # Step 2: Impute numeric columns
+    numeric_imputer = SimpleImputer(strategy='mean')
+    df[numeric_columns] = numeric_imputer.fit_transform(df[numeric_columns])
 
+    # Step 3: Handle categorical columns
+    for col in categorical_columns:
+        if df[col].dtype == 'object':
+            # Convert categorical column to one-hot encoded representation
+            encoded_cols = pd.get_dummies(df[col], prefix=col)
+            # Concatenate one-hot encoded columns
+            df = pd.concat([df.drop(col, axis=1), encoded_cols], axis=1)
+
+    # Step 4: Random Forest Iterative Imputer for the entire DataFrame
+    rf_imputer = IterativeImputer(estimator=RandomForestRegressor(random_state=random_state))
+    df = pd.DataFrame(rf_imputer.fit_transform(df), columns=df.columns)
+
+    return df
+
+# Call the function to fill missing values
+df = fill_missing_values(df, random_state=42)
 
 
 # Model Build 
